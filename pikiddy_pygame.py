@@ -12,6 +12,10 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(console_handler)
 
+os.putenv('SDL_FBDEV', '/dev/fb1')
+os.putenv('SDL_MOUSEDRV', 'TSLIB')
+os.putenv('SDL_MOUSEDEV', '/dev/input/touchscreen')
+
 class AlbumScene(ui.Scene):
     def __init__(self, folder):
         ui.Scene.__init__(self)
