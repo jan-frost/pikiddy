@@ -10,6 +10,7 @@ pygame installation
 	sudo apt-get install python-dev
 	sudo pip install pygame
 	sudo pip install pygameui
+	sudo pip install eyeD3
 	
 pyglet installation
 	wget https://github.com/downloads/AVbin/AVbin/install-avbin-linux-x86-32-v10

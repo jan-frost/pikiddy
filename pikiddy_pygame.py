@@ -3,6 +3,7 @@ import pygame
 import os
 import fnmatch
 import logging
+import eyed3
 
 PREVIOUS_SONG = "previous song"
 NEXT_SONG = "next song"
@@ -35,23 +36,43 @@ class AlbumScene(ui.Scene):
         self.last_action = "none"
         self.on_key_up.connect(self.key_pressed)
 
+        files = sorted(os.listdir(folder))
+
         logger.info('add folder: ' + folder)
         self.music_files = []
-        for music_file in fnmatch.filter(sorted(os.listdir(folder)), '*.mp3'):
-            logger.info('add song: ' + music_file)
-            self.music_files.append(os.path.join(folder, music_file))
+        self.album_description = None
+        for music_file in files:
+            if music_file.endswith('.mp3'):
+                logger.info('add song: ' + music_file)
+                music_path = os.path.join(folder, music_file)
+                self.music_files.append(music_path)
+                if self.album_description is None:
+                    id3 = eyed3.load(music_path)
+                    self.album_description = '%s: %s' % (id3.tag.album_artist, id3.tag.album)
         self.current_track = 0
         self.current_music = None
         self.paused = False
 
-        cover_rect = pygame.Rect(75, 35, 160, 160)
-        cover_file = fnmatch.filter(os.listdir(folder), 'cover.*')[0]
-        logger.info('add image: ' + cover_file)
-        img = pygame.image.load(os.path.join(folder, cover_file))
-        img = pygame.transform.scale(img, (cover_rect.width, cover_rect.height))
-        img_button = ui.ImageButton(cover_rect, img)
-        img_button.on_clicked.connect(self.image_clicked)
-        self.add_child(img_button)
+        cover = None
+        for cover_file in files:
+            if cover_file.lower().endswith(('.jpg', '.jpeg', '.gif', '.png')):
+                cover = os.path.join(folder, cover_file)
+
+        self.cover_button = None
+        if cover is None:
+            cover_rect = pygame.Rect(75, 35, 170, 170)
+            logger.info('could not find image')
+            self.cover_button = ui.Button(cover_rect, self.album_description)
+            self.cover_button.on_clicked.connect(self.image_clicked)
+            self.add_child(self.cover_button)
+        else:
+            cover_rect = pygame.Rect(75, 35, 160, 160)
+            logger.info('add image: ' + cover)
+            img = pygame.image.load(cover)
+            img = pygame.transform.scale(img, (cover_rect.width, cover_rect.height))
+            img_button = ui.ImageButton(cover_rect, img)
+            img_button.on_clicked.connect(self.image_clicked)
+            self.add_child(img_button)
 
         logger.info('initialize UI')
         left_rect = pygame.Rect(5, 35, 65, 170)
@@ -173,6 +194,13 @@ class AlbumScene(ui.Scene):
     def update(self, dt):
         ui.Scene.update(self, dt)
 
+        if self.cover_button is not None:
+            import time
+            millis = int(round(time.time() * 1000))
+            start_index = (millis / 300) % len(self.album_description)
+            length = min(18, len(self.album_description) - 1 - start_index)
+            self.cover_button.text = self.album_description[start_index:start_index+length]
+
     def on_pygame_event(self, e):
         if e.type == SONG_END:
             self.perform_action(NEXT_SONG)
@@ -234,6 +262,13 @@ if __name__ == '__main__':
     ui.scene.push(pikiddy)
     # ui.run()
 
+    custom_theme = ui.theme.light_theme
+    custom_theme.set(class_name='Button',
+                    state='normal',
+                    key='font',
+                    value=ui.resource.get_font(12))
+    ui.theme.use_theme(custom_theme)
+
     assert len(ui.scene.stack) > 0
 
     clock = pygame.time.Clock()
@@ -250,11 +285,12 @@ if __name__ == '__main__':
                 elapsed = 0
                 logger.debug('%d FPS', clock.get_fps())
 
+            exited = False
             for e in pygame.event.get():
                 if e.type == pygame.QUIT:
                     pygame.quit()
-                    import sys
-                    sys.exit()
+                    exited = True
+                    break
 
                 mousepoint = pygame.mouse.get_pos()
 
@@ -296,6 +332,9 @@ if __name__ == '__main__':
                         ui.scene.current.key_up(e.key)
                 else:
                     ui.scene.current.on_pygame_event(e)
+
+            if exited:
+                break
 
             ui.scene.current.update(dt / 1000.0)
             ui.scene.current.draw()
