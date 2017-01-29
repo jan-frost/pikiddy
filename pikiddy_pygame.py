@@ -16,9 +16,12 @@ QUIT = "quit",
 log_format = '%(asctime)-6s: %(name)s - %(levelname)s - %(message)s'
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(logging.Formatter(log_format))
+file_handler = logging.FileHandler('log.txt', 'w')
+file_handler.setFormatter(logging.Formatter(log_format))
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(console_handler)
+logger.addHandler(file_handler)
 
 
 # os.putenv('SDL_FBDEV', '/dev/fb0')
@@ -32,20 +35,24 @@ class AlbumScene(ui.Scene):
         self.last_action = "none"
         self.on_key_up.connect(self.key_pressed)
 
+        logger.info('add folder: ' + folder)
         self.music_files = []
         for music_file in fnmatch.filter(os.listdir(folder), '*.mp3'):
+            logger.info('add song: ' + music_file)
             self.music_files.append(os.path.join(folder, music_file))
         self.current_track = 0
         self.player = pyglet.media.Player()
 
         cover_rect = pygame.Rect(75, 35, 160, 160)
         cover_file = fnmatch.filter(os.listdir(folder), 'cover.*')[0]
+        logger.info('add image: ' + cover_file)
         img = pygame.image.load(os.path.join(folder, cover_file))
         img = pygame.transform.scale(img, (cover_rect.width, cover_rect.height))
         img_button = ui.ImageButton(cover_rect, img)
         img_button.on_clicked.connect(self.image_clicked)
         self.add_child(img_button)
 
+        logger.info('initialize UI')
         left_rect = pygame.Rect(5, 35, 65, 170)
         left_button = ui.Button(left_rect, '<')
         left_button.on_clicked.connect(self.left_clicked)
