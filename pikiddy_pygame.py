@@ -1,17 +1,18 @@
 import pygameui as ui
 import pygame
-import pyglet
 import os
 import fnmatch
 
 import logging
 
-PREVIOUS_SONG = "previous song",
-NEXT_SONG = "next song",
-PREVIOUS_ALBUM = "previous album",
-NEXT_ALBUM = "next album",
-TOGGLE_PAUSE = "toggle pause",
-QUIT = "quit",
+PREVIOUS_SONG = "previous song"
+NEXT_SONG = "next song"
+PREVIOUS_ALBUM = "previous album"
+NEXT_ALBUM = "next album"
+TOGGLE_PAUSE = "toggle pause"
+QUIT = "quit"
+
+SONG_END = pygame.USEREVENT + 1
 
 log_format = '%(asctime)-6s: %(name)s - %(levelname)s - %(message)s'
 console_handler = logging.StreamHandler()
@@ -41,7 +42,7 @@ class AlbumScene(ui.Scene):
             logger.info('add song: ' + music_file)
             self.music_files.append(os.path.join(folder, music_file))
         self.current_track = 0
-        self.player = pyglet.media.Player()
+        self.current_music = None
 
         cover_rect = pygame.Rect(75, 35, 160, 160)
         cover_file = fnmatch.filter(os.listdir(folder), 'cover.*')[0]
@@ -87,34 +88,23 @@ class AlbumScene(ui.Scene):
 
     def exited(self):
         ui.Scene.exited(self)
-        self.pause()
+        self.stop()
 
     def play(self, index):
-        if index < 0 or index >= len(self.music_files):
+        if index < 0 or index >= len(self.music_files) or os.name == 'nt':
             return
 
-        self.player.delete()
-        self.player = pyglet.media.Player()
-        self.player.on_player_eos = self.on_player_eos
+        self.current_music = pygame.mixer.music.load(self.music_files[index])
+        pygame.mixer.music.play()
 
-        music_file = self.music_files[index]
-        source = pyglet.media.load(music_file)
-        self.player.queue(source)
-        self.player.play()
-
-    def on_player_eos(self):
-        self.perform_action(NEXT_SONG)
-        if self.current_track == 0:
-            self.pause()
-
-    def pause(self):
-        self.player.pause()
+    def stop(self):
+        pygame.mixer.music.stop()
 
     def toggle_pause(self):
-        if self.player.playing:
-            self.player.pause()
+        if pygame.mixer.music.get_busy():
+            pygame.mixer.music.pause()
         else:
-            self.player.play()
+            pygame.mixer.music.unpause()
 
     def key_pressed(self, sender, key):
         action = {
@@ -170,6 +160,12 @@ class AlbumScene(ui.Scene):
     def update(self, dt):
         ui.Scene.update(self, dt)
 
+    def on_pygame_event(self, e):
+        if e.type == SONG_END:
+            self.perform_action(NEXT_SONG)
+            if self.current_track == 0:
+                self.stop()
+
 
 class PikiddyScene(ui.Scene):
     def __init__(self, root_path):
@@ -213,9 +209,80 @@ class PikiddyScene(ui.Scene):
 
         ui.scene.push(self.albums[self.current_album])
 
+    def on_pygame_event(self, e):
+        pass
+
 
 if __name__ == '__main__':
     ui.init('pikiddy', (320, 240))
+    pygame.mixer.music.set_endevent(SONG_END)
     pikiddy = PikiddyScene('data')
     ui.scene.push(pikiddy)
-    ui.run()
+    # ui.run()
+
+    assert len(ui.scene.stack) > 0
+
+    clock = pygame.time.Clock()
+    down_in_view = None
+
+    elapsed = 0
+
+    while True:
+        dt = clock.tick(60)
+
+        elapsed += dt
+        if elapsed > 5000:
+            elapsed = 0
+            logger.debug('%d FPS', clock.get_fps())
+
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                pygame.quit()
+                import sys
+                sys.exit()
+
+            mousepoint = pygame.mouse.get_pos()
+
+            if e.type == pygame.MOUSEBUTTONDOWN:
+                hit_view = ui.scene.current.hit(mousepoint)
+                logger.debug('hit %s' % hit_view)
+                if (hit_view is not None and
+                    not isinstance(hit_view, ui.scene.Scene)):
+                    ui.focus.set(hit_view)
+                    down_in_view = hit_view
+                    pt = hit_view.from_window(mousepoint)
+                    hit_view.mouse_down(e.button, pt)
+                else:
+                    ui.focus.set(None)
+            elif e.type == pygame.MOUSEBUTTONUP:
+                hit_view = ui.scene.current.hit(mousepoint)
+                if hit_view is not None:
+                    if down_in_view and hit_view != down_in_view:
+                        down_in_view.blurred()
+                        ui.focus.set(None)
+                    pt = hit_view.from_window(mousepoint)
+                    hit_view.mouse_up(e.button, pt)
+                down_in_view = None
+            elif e.type == pygame.MOUSEMOTION:
+                if down_in_view and down_in_view.draggable:
+                    pt = down_in_view.from_window(mousepoint)
+                    down_in_view.mouse_drag(pt, e.rel)
+                else:
+                    ui.scene.current.mouse_motion(mousepoint)
+            elif e.type == pygame.KEYDOWN:
+                if ui.focus.view:
+                    ui.focus.view.key_down(e.key, e.unicode)
+                else:
+                    ui.scene.current.key_down(e.key, e.unicode)
+            elif e.type == pygame.KEYUP:
+                if ui.focus.view:
+                    ui.focus.view.key_up(e.key)
+                else:
+                    ui.scene.current.key_up(e.key)
+            else:
+                ui.scene.current.on_pygame_event(e)
+
+        ui.scene.current.update(dt / 1000.0)
+        ui.scene.current.draw()
+        ui.window_surface.blit(ui.scene.current.surface, (0, 0))
+        pygame.display.flip()

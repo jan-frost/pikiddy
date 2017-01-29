@@ -19,7 +19,6 @@ class Album:
         for music_file in fnmatch.filter(os.listdir(folder), '*.mp3'):
             self.music_files.append(os.path.join(folder, music_file))
 
-        self.player = pyglet.media.Player()
         self.current_track = 0
 
     def start(self):
@@ -151,13 +150,13 @@ class Pikiddy:
         if symbol == key.RIGHT:
             self.albums[self.current_album].skip_forward()
         if symbol == key.UP:
-            self.albums[self.current_album].pause()
+            self.albums[self.current_album].stop()
             self.current_album -= 1
             if self.current_album < 0:
                 self.current_album = len(self.albums) - 1
             self.albums[self.current_album].start()
         if symbol == key.DOWN:
-            self.albums[self.current_album].pause()
+            self.albums[self.current_album].stop()
             self.current_album += 1
             if self.current_album >= len(self.albums):
                 self.current_album = 0
@@ -180,13 +179,13 @@ class Pikiddy:
         if x > 0.8*w and 0.2*h < y < 0.8*h:
             self.albums[self.current_album].skip_forward()
         if 0.2*w < x < 0.8*w and y > 0.8*h:
-            self.albums[self.current_album].pause()
+            self.albums[self.current_album].stop()
             self.current_album -= 1
             if self.current_album < 0:
                 self.current_album = len(self.albums) - 1
             self.albums[self.current_album].start()
         if 0.2*w < x < 0.8*w and y < 0.2*h:
-            self.albums[self.current_album].pause()
+            self.albums[self.current_album].stop()
             self.current_album += 1
             if self.current_album >= len(self.albums):
                 self.current_album = 0
