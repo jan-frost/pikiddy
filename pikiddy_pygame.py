@@ -258,6 +258,7 @@ class PikiddyScene(ui.Scene):
 if __name__ == '__main__':
     ui.init('pikiddy', (320, 240))
     pygame.mixer.music.set_endevent(SONG_END)
+    pygame.mouse.set_visible(False)
     pikiddy = PikiddyScene(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data'))
     ui.scene.push(pikiddy)
     # ui.run()

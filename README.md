@@ -12,7 +12,6 @@ pygame installation
 	sudo pip install pygameui
 	sudo pip install eyeD3
 	
-pyglet installation
-	wget https://github.com/downloads/AVbin/AVbin/install-avbin-linux-x86-32-v10
-	./install-avbin-linux-x86-32-v10
-	sudo pip install pyglet
+Enabling and disabling the splash screen is with some extra arguments in /boot/cmdline.txt – if this line includes “quiet splash”, the splash screen is shown; if it does not include those words, the old text-based boot is shown.
+
+The splash screen is a PNG file at /usr/share/plymouth/themes/pix/splash.png – you can change the image to whatever you want as long as you use the same file name.
