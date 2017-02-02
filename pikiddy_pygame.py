@@ -27,7 +27,7 @@ logger.addHandler(file_handler)
 
 os.putenv('SDL_FBDEV', '/dev/fb0')
 os.putenv('SDL_MOUSEDRV', 'TSLIB')
-os.putenv('SDL_MOUSEDEV', '/dev/input/touchscreen')
+os.putenv('SDL_MOUSEDEV', '/dev/input/event2')
 touch_scale = 1
 if os.name != 'nt':
     touch_scale = 640 / 480
