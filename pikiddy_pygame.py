@@ -29,8 +29,6 @@ os.putenv('SDL_FBDEV', '/dev/fb0')
 os.putenv('SDL_MOUSEDRV', 'TSLIB')
 os.putenv('SDL_MOUSEDEV', '/dev/input/event2')
 touch_scale = 1
-if os.name != 'nt':
-    touch_scale = 640 / 480
 
 
 class AlbumScene(ui.Scene):
@@ -264,6 +262,7 @@ if __name__ == '__main__':
     pygame.mixer.music.set_endevent(SONG_END)
     if os.name != 'nt':
         pygame.mouse.set_visible(False)
+        touch_scale = 640.0 / 480.0
     pikiddy = PikiddyScene(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data'))
     ui.scene.push(pikiddy)
     # ui.run()
@@ -298,7 +297,8 @@ if __name__ == '__main__':
                     exited = True
                     break
 
-                mousepoint = touch_scale * pygame.mouse.get_pos()
+                raw_mousepoint = pygame.mouse.get_pos()
+                mousepoint = (raw_mousepoint[0] * touch_scale, raw_mousepoint[1] * touch_scale)
 
                 if e.type == pygame.MOUSEBUTTONDOWN:
                     hit_view = ui.scene.current.hit(mousepoint)
