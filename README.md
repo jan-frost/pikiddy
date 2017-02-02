@@ -10,6 +10,10 @@ https://learn.adafruit.com/adafruit-pitft-28-inch-resistive-touchscreen-display-
 
 install fbcp
 https://github.com/notro/fbtft/wiki/Framebuffer-use
+https://github.com/watterott/RPi-Display/blob/master/docu/FAQ.md
+
+install splash screen
+http://www.raspberry-projects.com/pi/pi-operating-systems/raspbian/custom-boot-up-screen
 
 pip installation
 	sudo apt-get install python-pip 
