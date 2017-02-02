@@ -25,9 +25,13 @@ logger.addHandler(console_handler)
 logger.addHandler(file_handler)
 
 
-# os.putenv('SDL_FBDEV', '/dev/fb0')
-# os.putenv('SDL_MOUSEDRV', 'TSLIB')
-# os.putenv('SDL_MOUSEDEV', '/dev/input/touchscreen')
+os.putenv('SDL_FBDEV', '/dev/fb0')
+os.putenv('SDL_MOUSEDRV', 'TSLIB')
+os.putenv('SDL_MOUSEDEV', '/dev/input/touchscreen')
+touch_scale = 1
+if os.name != 'nt':
+    touch_scale = 640 / 480
+
 
 class AlbumScene(ui.Scene):
     def __init__(self, folder):
@@ -60,13 +64,13 @@ class AlbumScene(ui.Scene):
 
         self.cover_button = None
         if cover is None:
-            cover_rect = pygame.Rect(75, 35, 170, 170)
+            cover_rect = pygame.Rect(175, 105, 260, 260)
             logger.info('could not find image')
             self.cover_button = ui.Button(cover_rect, self.album_description)
             self.cover_button.on_clicked.connect(self.image_clicked)
             self.add_child(self.cover_button)
         else:
-            cover_rect = pygame.Rect(75, 35, 160, 160)
+            cover_rect = pygame.Rect(185, 105, 260, 260)
             logger.info('add image: ' + cover)
             img = pygame.image.load(cover)
             img = pygame.transform.scale(img, (cover_rect.width, cover_rect.height))
@@ -75,31 +79,31 @@ class AlbumScene(ui.Scene):
             self.add_child(img_button)
 
         logger.info('initialize UI')
-        left_rect = pygame.Rect(5, 35, 65, 170)
+        left_rect = pygame.Rect(5, 105, 175, 270)
         left_button = ui.Button(left_rect, '<')
         left_button.on_clicked.connect(self.left_clicked)
         self.add_child(left_button)
 
-        right_rect = pygame.Rect(250, 35, 65, 170)
+        right_rect = pygame.Rect(460, 105, 175, 270)
         right_button = ui.Button(right_rect, '>')
         right_button.on_clicked.connect(self.right_clicked)
         self.add_child(right_button)
 
-        up_rect = pygame.Rect(75, 5, 170, 25)
-        up_button = ui.Button(up_rect, '^')
+        up_rect = pygame.Rect(185, 5, 270, 95)
+        up_button = ui.Button(up_rect, '-')
         up_button.on_clicked.connect(self.up_clicked)
         self.add_child(up_button)
 
-        down_rect = pygame.Rect(75, 210, 170, 25)
-        down_button = ui.Button(down_rect, 'v')
+        down_rect = pygame.Rect(185, 380, 270, 95)
+        down_button = ui.Button(down_rect, '+')
         down_button.on_clicked.connect(self.down_clicked)
         self.add_child(down_button)
 
-        title_rect = pygame.Rect(5, 210, 65, 25)
+        title_rect = pygame.Rect(5, 380, 175, 95)
         self.title_label = ui.Label(title_rect, '1')
         self.add_child(self.title_label)
 
-        total_title_rect = pygame.Rect(250, 210, 65, 25)
+        total_title_rect = pygame.Rect(460, 380, 175, 95)
         total_title_label = ui.Label(total_title_rect, str(len(self.music_files)))
         self.add_child(total_title_label)
 
@@ -256,9 +260,10 @@ class PikiddyScene(ui.Scene):
 
 
 if __name__ == '__main__':
-    ui.init('pikiddy', (320, 240))
+    ui.init('pikiddy', (640, 480))
     pygame.mixer.music.set_endevent(SONG_END)
-    pygame.mouse.set_visible(False)
+    if os.name != 'nt':
+        pygame.mouse.set_visible(False)
     pikiddy = PikiddyScene(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data'))
     ui.scene.push(pikiddy)
     # ui.run()
@@ -293,7 +298,7 @@ if __name__ == '__main__':
                     exited = True
                     break
 
-                mousepoint = pygame.mouse.get_pos()
+                mousepoint = touch_scale * pygame.mouse.get_pos()
 
                 if e.type == pygame.MOUSEBUTTONDOWN:
                     hit_view = ui.scene.current.hit(mousepoint)
