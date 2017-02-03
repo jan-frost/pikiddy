@@ -261,8 +261,23 @@ class PikiddyScene(ui.Scene):
 
 
 if __name__ == '__main__':
+    window_size = (640, 480)
+    name = 'pikiddy'
+    # ui.init('pikiddy', (640, 480))
+    pygame.init()
+    logger.debug('pygame %s' % pygame.__version__)
+
     try:
-        ui.init('pikiddy', (640, 480))
+        pygame.key.set_repeat(200, 50)
+    except:
+        logger.error('setting key repeat failed')
+    try:
+        # global ui.window_surface
+        ui.window_surface = pygame.display.set_mode(window_size)
+        pygame.display.set_caption(name)
+        ui.window.rect = pygame.Rect((0, 0), window_size)
+        ui.theme.init()
+
         pygame.mixer.music.set_endevent(SONG_END)
         if os.name != 'nt':
             pygame.mouse.set_visible(False)
