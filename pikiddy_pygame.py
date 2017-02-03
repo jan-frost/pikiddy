@@ -4,6 +4,7 @@ import os
 import fnmatch
 import logging
 import eyed3
+import uuid
 
 PREVIOUS_SONG = "previous song"
 NEXT_SONG = "next song"
@@ -17,7 +18,9 @@ SONG_END = pygame.USEREVENT + 1
 log_format = '%(asctime)-6s: %(name)s - %(levelname)s - %(message)s'
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(logging.Formatter(log_format))
-file_handler = logging.FileHandler('log.txt', 'w')
+log_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'log' + str(uuid.uuid1()) + '.txt')
+print 'log file: %s' % log_file
+file_handler = logging.FileHandler(log_file, 'w')
 file_handler.setFormatter(logging.Formatter(log_format))
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -258,30 +261,30 @@ class PikiddyScene(ui.Scene):
 
 
 if __name__ == '__main__':
-    ui.init('pikiddy', (640, 480))
-    pygame.mixer.music.set_endevent(SONG_END)
-    if os.name != 'nt':
-        pygame.mouse.set_visible(False)
-        touch_scale = 640.0 / 480.0
-    pikiddy = PikiddyScene(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data'))
-    ui.scene.push(pikiddy)
-    # ui.run()
-
-    custom_theme = ui.theme.light_theme
-    custom_theme.set(class_name='Button',
-                    state='normal',
-                    key='font',
-                    value=ui.resource.get_font(12))
-    ui.theme.use_theme(custom_theme)
-
-    assert len(ui.scene.stack) > 0
-
-    clock = pygame.time.Clock()
-    down_in_view = None
-
-    elapsed = 0
-
     try:
+        ui.init('pikiddy', (640, 480))
+        pygame.mixer.music.set_endevent(SONG_END)
+        if os.name != 'nt':
+            pygame.mouse.set_visible(False)
+            touch_scale = 640.0 / 480.0
+        pikiddy = PikiddyScene(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data'))
+        ui.scene.push(pikiddy)
+        # ui.run()
+
+        custom_theme = ui.theme.light_theme
+        custom_theme.set(class_name='Button',
+                        state='normal',
+                        key='font',
+                        value=ui.resource.get_font(12))
+        ui.theme.use_theme(custom_theme)
+
+        assert len(ui.scene.stack) > 0
+
+        clock = pygame.time.Clock()
+        down_in_view = None
+
+        elapsed = 0
+
         while True:
             dt = clock.tick(60)
 
