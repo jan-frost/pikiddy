@@ -5,6 +5,7 @@ import fnmatch
 import logging
 import eyed3
 import uuid
+import signal
 
 PREVIOUS_SONG = "previous song"
 NEXT_SONG = "next song"
@@ -267,13 +268,31 @@ if __name__ == '__main__':
     pygame.init()
     logger.debug('pygame %s' % pygame.__version__)
 
+    # http://stackoverflow.com/questions/17035699/pygame-requires-keyboard-interrupt-to-init-display#21245100
+    # this section is an unbelievable nasty hack - for some reason Pygame
+    # needs a keyboardinterrupt to initialise in some limited circs (second time running)
+    class Alarm(Exception):
+        pass
+    def alarm_handler(signum, frame):
+        raise Alarm
+
+    if os.name == 'nt':
+        pygame.init()
+        ui.window_surface = pygame.display.set_mode(window_size)
+    else:
+        signal.signal(signal.SIGALRM, alarm_handler)
+        signal.alarm(3)
+        try:
+            pygame.init()
+            ui.window_surface = pygame.display.set_mode(window_size)
+            signal.alarm(0)
+        except Alarm:
+            raise KeyboardInterrupt
+
     try:
         pygame.key.set_repeat(200, 50)
-    except:
-        logger.error('setting key repeat failed')
-    try:
         # global ui.window_surface
-        ui.window_surface = pygame.display.set_mode(window_size)
+        # ui.window_surface = pygame.display.set_mode(window_size)
         pygame.display.set_caption(name)
         ui.window.rect = pygame.Rect((0, 0), window_size)
         ui.theme.init()
