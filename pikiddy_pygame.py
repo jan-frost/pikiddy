@@ -5,6 +5,9 @@ import fnmatch
 import logging
 import eyed3
 import uuid
+from threading import Timer
+import json
+import datetime
 
 PREVIOUS_SONG = "previous song"
 NEXT_SONG = "next song"
@@ -35,9 +38,36 @@ touch_scale_x = 1.0
 touch_scale_y = 1.0
 
 
+def utc_time():
+    epoch = datetime.datetime.utcfromtimestamp(0)
+    now = datetime.datetime.utcnow()
+    return int((now - epoch).total_seconds() * 1000.0)
+
+
+class Statistics:
+    def __init__(self):
+        self.current_song = 0
+        self.current_song_position = 0.0
+        self.last_played = 0.0
+
+    @classmethod
+    def fromjson(cls, json_string):
+        statistics = cls()
+        statistics.__dict__ = json.loads(json_string)
+        return statistics
+
+
 class AlbumScene(ui.Scene):
     def __init__(self, folder):
         ui.Scene.__init__(self)
+
+        self.statistics = Statistics()
+        self.statistics_file = os.path.join(folder, 'statistics.json')
+        if os.path.exists(self.statistics_file):
+            with open(self.statistics_file, 'r') as file_stream:
+                statistics_json = file_stream.read()
+                self.statistics = Statistics.fromjson(statistics_json)
+        self.timer = Timer(5.0, self.write_statistics)
 
         self.last_action = "none"
         self.on_key_up.connect(self.key_pressed)
@@ -112,10 +142,22 @@ class AlbumScene(ui.Scene):
     def entered(self):
         ui.Scene.entered(self)
         self.play(self.current_track)
+        self.timer.start()
 
     def exited(self):
         ui.Scene.exited(self)
         self.stop()
+        self.timer.cancel()
+
+    def write_statistics(self):
+        logger.info('write statistics')
+        self.statistics.current_song = self.current_track
+        self.statistics.current_song_position = pygame.mixer.music.get_pos()
+        self.statistics.last_played = utc_time()
+        statistics_json = json.dumps(self.statistics, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+        with open(self.statistics_file, 'w') as file_stream:
+            file_stream.write(statistics_json)
+        self.timer.run()
 
     def play(self, index):
         self.state = 'playing'
