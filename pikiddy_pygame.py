@@ -30,8 +30,9 @@ logger.addHandler(file_handler)
 
 os.putenv('SDL_FBDEV', '/dev/fb0')
 os.putenv('SDL_MOUSEDRV', 'TSLIB')
-os.putenv('SDL_MOUSEDEV', '/dev/input/event2')
-touch_scale = 1
+os.putenv('SDL_MOUSEDEV', '/dev/input/touchscreen')
+touch_scale_x = 1.0
+touch_scale_y = 1.0
 
 
 class AlbumScene(ui.Scene):
@@ -56,7 +57,7 @@ class AlbumScene(ui.Scene):
                     self.album_description = '%s: %s' % (id3.tag.album_artist, id3.tag.album)
         self.current_track = 0
         self.current_music = None
-        self.paused = False
+        self.state = 'stopped'
 
         cover = None
         for cover_file in files:
@@ -117,33 +118,38 @@ class AlbumScene(ui.Scene):
         self.stop()
 
     def play(self, index):
+        self.state = 'playing'
         if index < 0 or index >= len(self.music_files) or os.name == 'nt':
             return
 
         self.current_music = pygame.mixer.music.load(self.music_files[index])
         pygame.mixer.music.play()
-        self.paused = False
 
     def stop(self):
-        pygame.mixer.music.stop()
-        self.paused = True
+        self.state = 'stopped'
+        if os.name != 'nt':
+            pygame.mixer.music.stop()
+
+    def pause(self):
+        self.state = 'paused'
+        if os.name != 'nt':
+            pygame.mixer.music.unpause()
+
+    def unpause(self):
+        self.state = 'playing'
+        if os.name != 'nt':
+            pygame.mixer.music.pause()
 
     def toggle_pause(self):
-        if os.name == 'nt':
-            return
-
-        if self.paused:
-            if pygame.mixer.get_busy():
-                logger.info('unpause music: unpause')
-                pygame.mixer.music.unpause()
-            else:
-                logger.info('unpause music: play')
-                pygame.mixer.music.play()
-            self.paused = False
-        else:
-            logger.info('pause music')
-            pygame.mixer.music.pause()
-            self.paused = True
+        if self.state == 'stopped':
+            logger.info('toggle pause: play')
+            self.play(self.current_track)
+        elif self.state == 'paused':
+            logger.info('toggle pause: unpause')
+            self.unpause()
+        elif self.state == 'playing':
+            logger.info('toggle pause: pause')
+            self.pause()
 
     def key_pressed(self, sender, key):
         action = {
@@ -176,7 +182,6 @@ class AlbumScene(ui.Scene):
             logger.info('previous song: ' + str(self.current_track))
         elif action == TOGGLE_PAUSE:
             self.toggle_pause()
-            logger.info('toggle pause')
 
     def image_clicked(self, sender, button):
         self.perform_action(TOGGLE_PAUSE)
@@ -263,36 +268,12 @@ class PikiddyScene(ui.Scene):
 if __name__ == '__main__':
     window_size = (640, 480)
     name = 'pikiddy'
-    # ui.init('pikiddy', (640, 480))
-    pygame.init()
     logger.debug('pygame %s' % pygame.__version__)
 
-    if os.name == 'nt':
-        pygame.init()
-        ui.window_surface = pygame.display.set_mode(window_size)
-    else:
-        from signal import alarm, signal, SIGALRM, SIGKILL
-
-        # http://stackoverflow.com/questions/17035699/pygame-requires-keyboard-interrupt-to-init-display#21245100
-        # this section is an unbelievable nasty hack - for some reason Pygame
-        # needs a keyboardinterrupt to initialise in some limited circs (second time running)
-        class Alarm(Exception):
-            pass
-        def alarm_handler(signum, frame):
-            raise Alarm
-        signal(SIGALRM, alarm_handler)
-        alarm(3)
-        try:
-            pygame.init()
-            ui.window_surface = pygame.display.set_mode(window_size)
-            alarm(0)
-        except Alarm:
-            raise KeyboardInterrupt
-
     try:
-        pygame.key.set_repeat(200, 50)
-        # global ui.window_surface
-        # ui.window_surface = pygame.display.set_mode(window_size)
+        pygame.init()
+        # pygame.key.set_repeat(200, 50)
+        ui.window_surface = pygame.display.set_mode(window_size)
         pygame.display.set_caption(name)
         ui.window.rect = pygame.Rect((0, 0), window_size)
         ui.theme.init()
@@ -300,10 +281,10 @@ if __name__ == '__main__':
         pygame.mixer.music.set_endevent(SONG_END)
         if os.name != 'nt':
             pygame.mouse.set_visible(False)
-            touch_scale = 640.0 / 480.0
+            touch_scale_x = 640.0 / 480.0
+            touch_scale_y = 480.0 / 320.0
         pikiddy = PikiddyScene(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data'))
         ui.scene.push(pikiddy)
-        # ui.run()
 
         custom_theme = ui.theme.light_theme
         custom_theme.set(class_name='Button',
@@ -335,7 +316,7 @@ if __name__ == '__main__':
                     break
 
                 raw_mousepoint = pygame.mouse.get_pos()
-                mousepoint = (raw_mousepoint[0] * touch_scale, raw_mousepoint[1] * touch_scale)
+                mousepoint = (raw_mousepoint[0] * touch_scale_x, raw_mousepoint[1] * touch_scale_y)
 
                 if e.type == pygame.MOUSEBUTTONDOWN:
                     hit_view = ui.scene.current.hit(mousepoint)
