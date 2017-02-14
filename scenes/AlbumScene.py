@@ -144,12 +144,12 @@ class AlbumScene(ui.Scene):
     def pause(self):
         self.state = 'paused'
         if os.name != 'nt':
-            pygame.mixer.music.unpause()
+            pygame.mixer.music.pause()
 
     def unpause(self):
         self.state = 'playing'
         if os.name != 'nt':
-            pygame.mixer.music.pause()
+            pygame.mixer.music.unpause()
 
     def toggle_pause(self):
         if self.state == 'stopped':
