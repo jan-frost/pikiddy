@@ -29,6 +29,7 @@ class AlbumScene(ui.Scene):
                 statistics_json = file_stream.read()
                 self.statistics = Statistics.fromjson(statistics_json)
         self.timer = None
+        self.start_pos_sec = 0.0
 
         self.last_action = "none"
         self.on_key_up.connect(self.key_pressed)
@@ -46,7 +47,7 @@ class AlbumScene(ui.Scene):
                 if self.album_description is None:
                     id3 = eyed3.load(music_path)
                     self.album_description = '%s: %s' % (id3.tag.album_artist, id3.tag.album)
-        self.current_track = 0
+        self.current_track = self.statistics.current_song
         self.current_music = None
         self.state = 'stopped'
 
@@ -102,7 +103,7 @@ class AlbumScene(ui.Scene):
 
     def entered(self):
         ui.Scene.entered(self)
-        self.play(self.current_track)
+        self.play(self.current_track, self.statistics.current_song_position / 1000.0)
         self.timer = Timer(5.0, self.write_statistics)
         self.timer.start()
 
@@ -117,7 +118,7 @@ class AlbumScene(ui.Scene):
         logger.info('write statistics')
         self.statistics.current_song = self.current_track
         if os.name is not 'nt':
-            self.statistics.current_song_position = pygame.mixer.music.get_pos()
+            self.statistics.current_song_position = 1000.0 * self.start_pos_sec + pygame.mixer.music.get_pos()
         else:
             self.statistics.current_song_position = 0.0
         self.statistics.last_played = utc_time()
@@ -126,13 +127,14 @@ class AlbumScene(ui.Scene):
             file_stream.write(statistics_json)
         self.timer.run()
 
-    def play(self, index):
+    def play(self, index, start_pos=0.0):
         self.state = 'playing'
         if index < 0 or index >= len(self.music_files) or os.name == 'nt':
             return
 
         self.current_music = pygame.mixer.music.load(self.music_files[index])
-        pygame.mixer.music.play()
+        self.start_pos_sec = start_pos
+        pygame.mixer.music.play(start=start_pos)
 
     def stop(self):
         self.state = 'stopped'
@@ -183,10 +185,11 @@ class AlbumScene(ui.Scene):
             self.play(self.current_track)
             logger.info('next song: ' + str(self.current_track))
         elif action == Actions.PREVIOUS_SONG:
-            self.current_track -= 1
-            if self.current_track < 0:
-                self.current_track = len(self.music_files) - 1
-            self.title_label.text = str(self.current_track + 1)
+            if os.name is 'nt' or pygame.mixer.music.get_pos() < 5000.0:
+                self.current_track -= 1
+                if self.current_track < 0:
+                    self.current_track = len(self.music_files) - 1
+                self.title_label.text = str(self.current_track + 1)
             self.play(self.current_track)
             logger.info('previous song: ' + str(self.current_track))
         elif action == Actions.TOGGLE_PAUSE:
