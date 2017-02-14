@@ -15,9 +15,10 @@ class PikiddyScene(ui.Scene):
             if fnmatch.filter(filenames, '*.mp3'):
                 music_folders.append(root)
 
-        self.albums = []
+        albums = []
         for folder in music_folders:
-            self.albums.append(AlbumScene(folder))
+            albums.append(AlbumScene(folder))
+        self.albums = sorted(albums, key=lambda album: album.statistics.last_played, reverse=True)
         self.current_album = 0
 
     def layout(self):
